@@ -258,9 +258,19 @@ public class CalDAVCollection extends CalDAVCalendarCollectionBase{
 	 */
 	public void createCalendar(HttpClient httpClient) throws CalDAV4JException {
 
+		createCalendar(httpClient, null, null, null);
+    }
+
+	/**
+	 * Creates a calendar at the specified path 
+	 * @param httpClient the httpClient which will make the request
+	 * @throws CalDAV4JException on error
+	 */
+	public void createCalendar(HttpClient httpClient, String displayName, String description, String descriptionLanguage) throws CalDAV4JException {
+
 		HttpMkCalendarMethod mkCalendarMethod = null;
 		try {
-			mkCalendarMethod = methodFactory.createMkCalendarMethod(getCalendarCollectionRoot());
+			mkCalendarMethod = methodFactory.createMkCalendarMethod(getCalendarCollectionRoot(), displayName, description, descriptionLanguage);
 			HttpResponse response = httpClient.execute(getDefaultHttpHost(mkCalendarMethod.getURI()), mkCalendarMethod);
 			if (!mkCalendarMethod.succeeded(response)){
 				MethodUtil.StatusToExceptions(mkCalendarMethod, response);
@@ -440,25 +450,36 @@ public class CalDAVCollection extends CalDAVCalendarCollectionBase{
 	/**
 	 * Updates the resource containing the VEvent with the same UID as the given 
 	 * VEvent with the given VEvent
-	 *
 	 * @param httpClient the httpClient which will make the request
 	 * @param vevent the vevent to update
-	 * @param timezone The VTimeZone of the VEvent if it references one, 
-	 *                 otherwise null
+	 * @param timezone The VTimeZone of the VEvent if it references one, otherwise null
 	 * @throws CalDAV4JException on error
 	 */
-	// TODO: Deal with SEQUENCE
 	public void updateMasterEvent(HttpClient httpClient, VEvent vevent, VTimeZone timezone)
             throws CalDAV4JException {
-		String uid = ICalendarUtils.getUIDValue(vevent);
-		CalDAVResource resource = getCalDAVResourceByUID(httpClient, Component.VEVENT, uid);
+		
+		updateMasterComponent(httpClient, vevent, timezone);
+	}
+	
+	/**
+	 * Updates the resource containing the CalendarComponent with the same UID as the {@code calendarComponent}.
+	 * @param httpClient the httpClient which will make the request.
+	 * @param calendarComponent the calendar component to update.
+	 * @param timezone The VTimeZone of the VEvent if it references one, otherwise null.
+	 * @throws CalDAV4JException on error.
+	 */
+	// TODO: Deal with SEQUENCE
+	public void updateMasterComponent(HttpClient httpClient, CalendarComponent calendarComponent, VTimeZone timezone)
+            throws CalDAV4JException {
+		String uid = ICalendarUtils.getUIDValue(calendarComponent);
+		CalDAVResource resource = getCalDAVResourceByUID(httpClient, calendarComponent.getName(), uid);
 		Calendar calendar = resource.getCalendar();
 
 		//let's find the master event first!
-		VEvent originalVEvent = ICalendarUtils.getMasterEvent(calendar, uid);
+		CalendarComponent originalVEvent = ICalendarUtils.getMasterComponentWithNameFilter(calendar, calendarComponent.getName(), uid);
 
 		calendar.getComponents().remove(originalVEvent);
-		calendar.getComponents().add(vevent);
+		calendar.getComponents().add(calendarComponent);
 
 		if(timezone != null) {
 			VTimeZone originalVTimeZone = ICalendarUtils.getTimezone(calendar);
@@ -537,8 +558,8 @@ public class CalDAVCollection extends CalDAVCalendarCollectionBase{
 
 
 		List<CalDAVResource> cr;
-		cr = getCalDAVResources(httpClient, gq.generate());
 		try {
+			cr = getCalDAVResources(httpClient, gq.generate());
 			resource = cr.get(0);
 			if (uid.equals(ICalendarUtils.getUIDValue(ICalendarUtils.getFirstComponent(resource, component)))) {
 				cache.putResource(resource);
@@ -682,7 +703,6 @@ public class CalDAVCollection extends CalDAVCalendarCollectionBase{
 		} catch (Exception e){
 			throw new CalDAV4JException("Problem executing delete method",e);
 		}
-		
 		if (response == null || response.getStatusLine().getStatusCode() != CalDAVStatus.SC_NO_CONTENT){
 			MethodUtil.StatusToExceptions(deleteMethod, response);
 			throw new CalDAV4JException("Problem executing delete method");

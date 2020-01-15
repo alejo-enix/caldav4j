@@ -354,6 +354,24 @@ public class ICalendarUtils {
 	}
 
 	/**
+	 *  Returns the "master" Component - one that does not have a RECURRENCE-ID
+	 * @param calendar Calendar
+	 * @param uid UID of Component
+	 * @return Component with UID and no Recurrence ID
+	 */
+	// TODO create junit
+	public static CalendarComponent getMasterComponentWithNameFilter(net.fortuna.ical4j.model.Calendar calendar, String nameFilter, String uid){
+		ComponentList<CalendarComponent> clist = calendar.getComponents(nameFilter);
+		for (CalendarComponent curEvent : clist){
+			String curUid = getUIDValue(curEvent);
+			if (uid.equals(curUid) && !hasProperty(curEvent, Property.RECURRENCE_ID)) {
+				return curEvent;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * @param calendar Component
 	 * @param uid UID of Component
 	 * @param recurrenceId Recurrence ID

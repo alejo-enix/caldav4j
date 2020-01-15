@@ -89,15 +89,20 @@ public class GenerateQuery  {
 	 */
 	public GenerateQuery(String component, String filterComponent) 
 	  throws CalDAV4JException {
-		setComponent(component);
-		setFilter(filterComponent);
+		this(component, filterComponent, null);
 	}
 	
 	/**
 	 * Default Constructor
-	 */	
+	 */
 	public GenerateQuery() {
 
+	}
+
+	public GenerateQuery(String component, String filterComponent, String collation) throws CalDAV4JException {
+		this.collation = collation;
+		setComponent(component);
+		setFilter(filterComponent);
 	}
 
 	/**
